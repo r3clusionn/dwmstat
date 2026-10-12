@@ -1,13 +1,14 @@
 # dwmstat
 
-A status bar program for dwm in one C file: brightness, volume, Bluetooth, Wi-Fi, battery with time left, and the clock, written to the root window name that dwm shows. Unlike status programs that redraw on a timer, it sleeps until something changes: the kernel's uevents and network link messages, a signal from the scripts that change volume or brightness, or the next minute for the clock. It is made for one laptop (HP OmniBook 7, Ryzen AI 9 HX 475, Gentoo with dwm, PipeWire and Bluetooth started on demand). It never starts PipeWire or bluetoothd, it only looks at whether they are running.
+A status bar program for dwm in one C file: the power plan, brightness, volume, Bluetooth, Wi-Fi, battery with time left, and the clock, written to the root window name that dwm shows. Unlike status programs that redraw on a timer, it sleeps until something changes: the kernel's uevents and network link messages, a signal from the scripts that change volume or brightness, or the next minute for the clock. It is made for one laptop (HP OmniBook 7, Ryzen AI 9 HX 475, Gentoo with dwm, PipeWire and Bluetooth started on demand). It never starts PipeWire or bluetoothd, it only looks at whether they are running.
 
 **Status:** working, in daily use since October 2026 on the target laptop.
 
-![The right end of the dwm bar at 2x scale, on a dark background: "☀ 70%  ♪ 30%  Ƀ off  ⇅ on  ⚡41% 4:06  Mon 12 Oct 02:32", meaning backlight 70%, volume 30%, Bluetooth off, Wi-Fi connected, battery at 41% with 4 hours 6 minutes left, and the date and time](docs/images/bar.png)
+![The right end of the dwm bar at 2x scale, on a dark background: "⚙ auto:bal  ☀ 100%  ♪ 30%  Ƀ off  ⇅ on  ⚡87% 11:34  Mon 12 Oct 10:58", meaning the balanced power plan chosen automatically, backlight 100%, volume 30%, Bluetooth off, Wi-Fi connected, battery at 87% with 11 hours 34 minutes left, and the date and time](docs/images/bar.png)
 
 ## Features
 
+- **Power plan** from the `powerprofile` script's state file (`/run/powerprofile`): `⚙ bal` for a plan picked by hand, `⚙ auto:bal` when it follows the charger (bat, bal, perf, game). Shown only if the file exists.
 - **Brightness** from `/sys/class/backlight`.
 - **Volume** from `wpctl` (PipeWire's default sink), with "mute"; "off" when PipeWire isn't running. A stale socket from a killed daemon counts as off.
 - **Bluetooth:** off, on, or the number of connected devices, read from the HCI device and its links in sysfs. No bluez libraries needed.
@@ -48,6 +49,7 @@ pkill -USR1 -x dwmstat
 | Brightness | `bl` (bound to the brightness keys) |
 | Audio on/off | `audio toggle` (F2), `audio ensure` from the media players |
 | Bluetooth power | `bt-toggle` |
+| Power plan | `powerprofile` |
 
 Battery, power source, Wi-Fi and Bluetooth connections need no signal: they come from the kernel.
 

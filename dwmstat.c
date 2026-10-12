@@ -5,7 +5,7 @@
  *   - kernel uevents for power_supply / rfkill / bluetooth (AC plug, battery
  *     status, radio switches, Bluetooth connections)
  *   - rtnetlink link changes (Wi-Fi connect/disconnect)
- *   - SIGUSR1, sent by bl/vol/audio/bt-toggle after they change something
+ *   - SIGUSR1, sent by bl/vol/audio/bt-toggle/powerprofile after they change something
  * It never starts PipeWire or bluetoothd: it only looks at their state.
  */
 #define _GNU_SOURCE
@@ -257,6 +257,29 @@ battery(char *out, size_t n)
 		closedir(d);
 }
 
+/* The power plan from powerprofile's state file: "⚙ bal" when picked by hand,
+ * "⚙ auto:bal" when it follows the charger. Nothing if there is no file. */
+static void
+plan(char *out, size_t n)
+{
+	static const char *names[][2] = {
+		{ "battery", "bat" }, { "balanced", "bal" }, { "performance", "perf" }, { "gaming", "game" },
+	};
+	char buf[64], name[32] = "", how[16] = "";
+	const char *s;
+	size_t i;
+
+	*out = '\0';
+	if (readstr("/run/powerprofile", buf, sizeof(buf)) < 0 ||
+	    sscanf(buf, "%31s %15s", name, how) < 1)
+		return;
+	s = name;
+	for (i = 0; i < sizeof(names) / sizeof(*names); i++)
+		if (!strcmp(name, names[i][0]))
+			s = names[i][1];
+	snprintf(out, n, "⚙ %s%s  ", strcmp(how, "pinned") ? "auto:" : "", s);
+}
+
 static int
 nlsock(int proto, unsigned int groups)
 {
@@ -297,7 +320,7 @@ drain(int fd, int uevent)
 int
 main(void)
 {
-	char bri[32], vol[32], bt[32], net[32], bat[48], clk[64];
+	char pp[32], bri[32], vol[32], bt[32], net[32], bat[48], clk[64];
 	char status[256], last[256] = "";
 	struct signalfd_siginfo si;
 	struct pollfd fds[4];
@@ -327,14 +350,15 @@ main(void)
 
 	volume(vol, sizeof(vol));
 	for (;;) {
+		plan(pp, sizeof(pp));
 		brightness(bri, sizeof(bri));
 		bluetooth(bt, sizeof(bt));
 		wifi(net, sizeof(net));
 		battery(bat, sizeof(bat));
 		t = time(NULL);
 		strftime(clk, sizeof(clk), "%a %d %b %H:%M", localtime(&t));
-		snprintf(status, sizeof(status), "%s%s  %s  %s%s  %s ",
-		         bri, vol, bt, net, bat, clk);
+		snprintf(status, sizeof(status), "%s%s%s  %s  %s%s  %s ",
+		         pp, bri, vol, bt, net, bat, clk);
 		if (strcmp(status, last)) {
 			XStoreName(dpy, DefaultRootWindow(dpy), status);
 			XFlush(dpy);
